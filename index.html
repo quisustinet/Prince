@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="pl">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="theme-color" content="#171921"><title>Prince · Pałac Piasków</title><link rel="stylesheet" href="/src/style.css"></head>
+<body>
+  <main>
+    <header><a class="brand" href="/">P<span>R</span>INCE <small>PAŁAC PIASKÓW</small></a><span class="edition">ROZDZIAŁ I &nbsp; / &nbsp; UCIECZKA</span><button id="sound" aria-label="Włącz dźwięk">DŹWIĘK: WYŁ.</button></header>
+    <section class="intro"><div><p class="eyebrow">PRZYGODA ZACZYNA SIĘ OD JEDNEGO SKOKU</p><h1>Czas nie czeka.<br><em>Ty też nie powinieneś.</em></h1></div><p class="description">Przemierz zapomniany pałac. Przeskakuj przepaście, omijaj ostrza i zbierz trzy fragmenty światła, by otworzyć bramę.</p></section>
+    <section class="game" aria-label="Gra platformowa Pałac Piasków">
+      <canvas id="game" tabindex="0" aria-label="Gra. Strzałki lub A i D: ruch. Spacja: skok. P: pauza. R: restart."></canvas>
+      <div class="hud"><span>◈ <b id="gems">0 / 3</b><small>FRAGMENTY ŚWIATŁA</small></span><span class="level">PAŁAC PIASKÓW <small>01 — DZIEDZINIEC</small></span><button id="pause" aria-label="Wstrzymaj grę">Ⅱ</button></div>
+      <div id="overlay" class="overlay"><p class="eyebrow">ZA MURAMI CZEKA WOLNOŚĆ</p><h2>Obudź legendę.</h2><p>Trzy fragmenty. Jedna brama. Twój ruch.</p><button id="start" class="primary">ROZPOCZNIJ PODRÓŻ <span>→</span></button><small>STRZAŁKI / A D — RUCH &nbsp; · &nbsp; SPACJA — SKOK</small></div>
+      <div class="touch"><button data-key="ArrowLeft" aria-label="W lewo">←</button><button data-key="ArrowRight" aria-label="W prawo">→</button><button data-key="Space" aria-label="Skok">↑</button></div>
+      <div id="toast" role="status"></div>
+    </section>
+    <footer><span><kbd>←</kbd><kbd>→</kbd> ruch <i></i><kbd>SPACJA</kbd> skok <i></i><kbd>P</kbd> pauza <i></i><kbd>R</kbd> od nowa</span><span>ODNAJDŹ ŚWIATŁO. <strong>OTWÓRZ BRAMĘ.</strong></span></footer>
+  </main><script type="module" src="/src/game.js"></script>
+</body></html>
