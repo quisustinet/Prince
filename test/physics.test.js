@@ -22,9 +22,9 @@ test('ground acceleration, inertia and reversal take time instead of teleporting
   assert.equal(p.mode, 'brake');
   assert.ok(p.vx > 0);
   assert.ok(p.x > before, 'momentum carries the body forward during braking');
-  tick(p, { left: true }, 16);
+  tick(p, { left: true }, 40);
   assert.ok(p.vx < 0);
-  tick(p, {}, 25);
+  tick(p, {}, 60);
   assert.equal(p.vx, 0);
 });
 
@@ -209,4 +209,51 @@ test('hanging or climbing does not make the body immune to hazards', () => {
   tick(q, { up: true });
   const climbingHazard = { platforms, spikes: [{ x: 440, y: 360, w: 20 }] };
   assert.equal(step(q, dt, {}, climbingHazard), true);
+});
+
+
+test('releasing a full run takes recovery steps and distance before coming to rest in either direction', () => {
+  for (const direction of [-1, 1]) {
+    const p = { ...spawn(), x: 190, vx: 275 * direction, facing: direction, mode: 'run' };
+    const origin = p.x;
+    tick(p);
+    assert.equal(p.mode, 'brake');
+    assert.ok(Math.abs(p.vx) > 260, 'release preserves momentum instead of snapping to idle');
+    tick(p, {}, 23);
+    assert.ok(Math.abs(p.vx) > 130 && Math.abs(p.vx) < 150);
+    assert.equal(p.facing, direction);
+    tick(p, {}, 36);
+    assert.equal(p.vx, 0);
+    assert.equal(p.mode, 'idle');
+    const stoppingDistance = (p.x - origin) * direction;
+    assert.ok(stoppingDistance > 55 && stoppingDistance < 61, `stopping distance: ${stoppingDistance}`);
+    const stoppedAt = p.x;
+    tick(p, {}, 60);
+    assert.equal(p.x, stoppedAt, 'no endless sliding after the recovery steps');
+  }
+});
+
+test('reversing brakes in the original facing direction before turning, mirrored for left and right', () => {
+  for (const direction of [-1, 1]) {
+    const p = { ...spawn(), x: 190, vx: 275 * direction, facing: direction, mode: 'run' };
+    const input = direction > 0 ? { left: true } : { right: true };
+    tick(p, input, 24);
+    assert.equal(p.mode, 'brake');
+    assert.equal(p.facing, direction, 'body does not turn backwards while still moving quickly');
+    assert.ok(p.vx * direction > 60);
+    tick(p, input, 12);
+    assert.ok(p.vx * direction < 0);
+    assert.equal(p.facing, -direction);
+    assert.equal(p.mode, 'run');
+  }
+});
+
+test('releasing the direction in mid-air preserves jump momentum until landing', () => {
+  const p = { ...spawn(), vx: 275, mode: 'run' };
+  tick(p, { right: true, jump: true, jumpHeld: true });
+  const origin = p.x;
+  tick(p, { jumpHeld: true }, 25);
+  assert.equal(p.grounded, false);
+  assert.equal(p.vx, 275);
+  assert.ok(p.x > origin + 55);
 });

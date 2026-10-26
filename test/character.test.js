@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computePose } from '../src/character.js';
+import { computePose, computeAnimatedPose } from '../src/character.js';
 import { spawn } from '../src/physics.js';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -90,4 +90,73 @@ test('climbing starts continuously from the hanging pose and finishes near stand
       assert.ok(distance(world(end, final[key]), world(end, standing[key])) < 6, `${key}: climb exit snap`);
     }
   }
+});
+
+
+// Canvas Y grows downwards. Opposite cross-product signs distinguish a
+// backward-pointing elbow from a forward-pointing knee after either mirror.
+const bendSide = (root, joint, end) => (end.x - root.x) * (joint.y - root.y)
+  - (end.y - root.y) * (joint.x - root.x);
+function checkRelaxedBends(p, pose) {
+  for (const side of ['front', 'back']) {
+    const elbowBend = bendSide(world(p, pose[`${side}Shoulder`]), world(p, pose[`${side}Elbow`]), world(p, pose[`${side}Hand`])) * p.facing;
+    const kneeBend = bendSide(world(p, pose[`${side}Hip`]), world(p, pose[`${side}Knee`]), world(p, pose[`${side}Foot`])) * p.facing;
+    assert.ok(elbowBend > 0, `${pose.mode}: ${side} elbow bends backwards`);
+    assert.ok(kneeBend < 0, `${pose.mode}: ${side} knee bends forwards`);
+  }
+}
+
+test('relaxed and running elbows bend opposite to knees in either facing direction', () => {
+  for (const facing of [-1, 1]) {
+    for (const mode of ['idle', 'run', 'brake', 'land']) {
+      for (let gait = 0; gait < 76; gait += 4) {
+        const p = { ...spawn(), mode, facing, vx: mode === 'idle' ? 0 : facing * 240,
+          gait, animTime: 0.06, landImpact: 0.7 };
+        checkRelaxedBends(p, computePose(p, 0));
+      }
+    }
+  }
+});
+
+test('render-frame smoothing preserves the corrected elbow bend branch', () => {
+  for (const facing of [-1, 1]) {
+    const p = { ...spawn(), mode: 'run', facing, vx: facing * 240 };
+    for (let frame = 0; frame < 90; frame++) {
+      p.gait = frame * 4;
+      if (frame > 45) p.mode = 'brake';
+      checkRelaxedBends(p, computeAnimatedPose(p, frame / 60));
+    }
+  }
+});
+
+test('overhead elbows stay outside the wall and relax only after the climb push', () => {
+  for (const facing of [-1, 1]) {
+    const p = hanging(facing);
+    const pose = computePose(p);
+    for (const side of ['front', 'back']) {
+      const elbow = world(p, pose[`${side}Elbow`]);
+      assert.ok((elbow.x - p.ledge.x) * facing < 0, 'elbow must not penetrate wall');
+      near(world(p, pose[`${side}Hand`]).y, p.ledge.y);
+    }
+    const before = computePose({ ...p, mode: 'climb', climbProgress: 0.7599 });
+    const after = computePose({ ...p, mode: 'climb', climbProgress: 0.7601 });
+    for (const side of ['front', 'back']) {
+      assert.ok(distance(before[`${side}Elbow`], after[`${side}Elbow`]) < 0.5, 'almost-straight push avoids a pole flip pop');
+    }
+    const final = computePose({ ...p, mode: 'climb', climbProgress: 1 });
+    assert.equal(final.frontArmBend, 1);
+    assert.equal(final.backArmBend, 1);
+  }
+});
+
+test('braking uses recovery steps instead of frozen sliding feet', () => {
+  const p = { ...spawn(), mode: 'brake', vx: 240, gait: 4 };
+  const first = computePose(p), next = computePose({ ...p, gait: 20 });
+  assert.ok(first.shoulder.x < first.hip.x, 'the torso leans back against travel');
+  assert.ok(distance(first.frontFoot, next.frontFoot) > 10);
+  const planted = world(p, first.frontFoot);
+  const later = { ...p, x: p.x + 12, gait: p.gait + 12, vx: 190 };
+  const foot = world(later, computePose(later).frontFoot);
+  near(foot.x, planted.x, 0.07);
+  near(foot.y, planted.y);
 });

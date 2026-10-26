@@ -22,7 +22,7 @@ export const checkpoints = [
   { x: 1510, y: 356 }, { x: 1910, y: 251 },
 ];
 export const movement = Object.freeze({
-  speed: 275, acceleration: 1900, braking: 2500, friction: 1750,
+  speed: 275, acceleration: 1900, braking: 1000, friction: 650,
   airAcceleration: 680, gravity: 1500, jumpSpeed: 550,
   coyoteTime: 0.11, jumpBuffer: 0.14, climbDuration: 0.62,
 });
@@ -133,14 +133,18 @@ export function step(p, dt, input = {}, world = { platforms, spikes }) {
   else p.coyote = Math.max(0, p.coyote - dt);
   p.buffer = input.jump ? movement.jumpBuffer : Math.max(0, p.buffer - dt);
 
-  const braking = direction && Math.sign(p.vx) && Math.sign(p.vx) !== direction && Math.abs(p.vx) > 45;
+  // Releasing a run takes roughly two body widths to settle. Reversing first
+  // brakes in the original facing direction, then accelerates into the turn.
+  const reversing = direction !== 0 && Math.sign(p.vx) === -direction;
+  const braking = wasGrounded && Math.abs(p.vx) > 0.01 && (!direction || reversing);
   if (wasGrounded) {
-    const acceleration = direction ? (braking ? movement.braking : movement.acceleration) : movement.friction;
+    const acceleration = direction ? (reversing ? movement.braking : movement.acceleration) : movement.friction;
     p.vx = approach(p.vx, direction * movement.speed, acceleration * dt);
   } else if (direction) {
     p.vx = approach(p.vx, direction * movement.speed, movement.airAcceleration * dt);
   }
-  if (direction) p.facing = direction;
+  // Do not mirror the body while its momentum still carries it the other way.
+  if (direction && (Math.abs(p.vx) < 25 || Math.sign(p.vx) === direction)) p.facing = direction;
   if (p.buffer > 0 && p.coyote > 0) {
     p.vy = -movement.jumpSpeed; p.grounded = false;
     p.coyote = 0; p.buffer = 0; p.jumpCut = false;
@@ -180,7 +184,7 @@ export function step(p, dt, input = {}, world = { platforms, spikes }) {
   if (catchLedge(p, oldY, direction, solids)) return false;
   if (hazard(p, hazards)) { mode(p, 'dead'); return true; }
   mode(p, p.grounded
-    ? (p.landTimer > 0 ? 'land' : braking ? 'brake' : Math.abs(p.vx) > 12 ? 'run' : 'idle')
+    ? (p.landTimer > 0 ? 'land' : Math.abs(p.vx) < 0.01 ? 'idle' : braking ? 'brake' : 'run')
     : (p.vy < 0 ? 'rise' : 'fall'));
   return false;
 }

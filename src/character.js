@@ -49,7 +49,10 @@ export function computePose(p, time = 0) {
   let shoulder = point(lerp(-0.5, 5, energy), 17 + bounce + compression + breath * (1 - energy));
   let frontFoot = gaitFoot(phase, energy), backFoot = gaitFoot(phase + 0.5, energy);
   let frontHand, backHand;
-  let frontBend = -1, backBend = -1;
+  // In facing-relative coordinates a relaxed elbow sits behind the arm's
+  // shoulder→wrist line, opposite to a knee. Overhead reaches use the other
+  // branch so the elbows remain outside a wall while the hands grip its lip.
+  let frontBend = 1, backBend = 1;
   const swing = Math.sin(phase * TAU) * energy;
   frontHand = point(3 - swing * 16, 39 - Math.abs(swing) * 6);
   backHand = point(-2 + swing * 15, 39 - Math.abs(swing) * 6);
@@ -58,10 +61,15 @@ export function computePose(p, time = 0) {
     frontHand = point(5 + breath * 0.6, 41); backHand = point(-3, 40);
   }
   if (mode === 'brake') {
-    shoulder.x = -5;
-    hip.x = -2;
-    frontFoot = point(15, 63); backFoot = point(-10, 63);
-    frontHand = point(12, 29); backHand = point(-12, 25);
+    // Keep taking recovery steps as momentum decays. Freezing both feet here
+    // makes a moving body look as though it is sliding across the stone.
+    shoulder.x = lerp(-0.5, -5, energy);
+    hip.x = lerp(-1, -2, energy);
+    const recoveryStride = clamp(speed / 60);
+    frontFoot = gaitFoot(phase, recoveryStride);
+    backFoot = gaitFoot(phase + 0.5, recoveryStride);
+    frontHand = point(lerp(5, 12, energy), lerp(41, 29, energy));
+    backHand = point(lerp(-3, -12, energy), lerp(40, 25, energy));
   }
   if (mode === 'rise') {
     const tuck = clamp(-(p.vy || 0) / 550);
@@ -71,6 +79,7 @@ export function computePose(p, time = 0) {
     frontFoot = point(14, lerp(57, 45, tuck));
     backFoot = point(-13, lerp(61, 52, tuck));
     frontHand = point(16, 9); backHand = point(-13, 29);
+    frontBend = -1;
   }
   if (mode === 'fall') {
     const falling = clamp((p.vy || 0) / 450);
@@ -80,6 +89,7 @@ export function computePose(p, time = 0) {
     backFoot = point(-9, 57 + falling * 4);
     frontHand = point(19, lerp(11, 2, falling));
     backHand = point(-11, lerp(16, 6, falling));
+    frontBend = backBend = -1;
   }
   if (mode === 'land') {
     frontFoot = point(11, 63); backFoot = point(-10, 63);
@@ -88,6 +98,7 @@ export function computePose(p, time = 0) {
   }
   const anchors = (mode === 'hang' || mode === 'climb') && p.ledge;
   if (anchors) {
+    frontBend = backBend = -1;
     const edge = point((p.ledge.x - (p.x + p.w / 2)) * p.facing, p.ledge.y - p.y);
     if (mode === 'hang') {
       const sway = Math.sin(time * 2.6) * 1.5;
@@ -109,6 +120,10 @@ export function computePose(p, time = 0) {
       const release = smooth((t - 0.66) / 0.25);
       frontHand = blend(add(edge, 0, 0), add(shoulder, 5, 24), release);
       backHand = blend(add(edge, -6, 0), add(shoulder, -3, 23), release);
+      // Both arms become almost straight during the final push. Change IK
+      // branch there, before releasing the hands, without an elbow popping
+      // through the body when returning to the relaxed standing pose.
+      if (t >= 0.76) frontBend = backBend = 1;
     }
   }
   const frontShoulder = add(shoulder, 2.5, 1), backShoulder = add(shoulder, -2.5, 0);
@@ -124,12 +139,12 @@ export function computePose(p, time = 0) {
     backKnee: backLeg.joint, backFoot: backLeg.end,
     frontElbow: frontArm.joint, frontHand: frontArm.end,
     backElbow: backArm.joint, backHand: backArm.end,
-    anchors: Boolean(anchors),
+    anchors: Boolean(anchors), frontArmBend: frontBend, backArmBend: backBend,
   };
 }
 
 const histories = new WeakMap();
-function softenedPose(p, time) {
+export function computeAnimatedPose(p, time) {
   const target = computePose(p, time);
   const old = histories.get(p);
   const dt = old ? clamp(time - old.time, 0, 0.05) : 1;
@@ -144,8 +159,8 @@ function softenedPose(p, time) {
     target.frontShoulder = add(target.shoulder, 2.5, 1); target.backShoulder = add(target.shoulder, -2.5, 0);
     const frontLeg = solveLimb(target.frontHip, target.frontFoot, 17.5, 17.5);
     const backLeg = solveLimb(target.backHip, target.backFoot, 17.5, 17.5);
-    const frontArm = solveLimb(target.frontShoulder, target.frontHand, 13, 12.5);
-    const backArm = solveLimb(target.backShoulder, target.backHand, 13, 12.5);
+    const frontArm = solveLimb(target.frontShoulder, target.frontHand, 13, 12.5, target.frontArmBend);
+    const backArm = solveLimb(target.backShoulder, target.backHand, 13, 12.5, target.backArmBend);
     target.frontKnee = frontLeg.joint; target.frontFoot = frontLeg.end;
     target.backKnee = backLeg.joint; target.backFoot = backLeg.end;
     target.frontElbow = frontArm.joint; target.frontHand = frontArm.end;
@@ -222,7 +237,7 @@ function sashTail(ctx, pose, p, time) {
 
 /** Draw at world coordinates. Call after applying the world camera transform. */
 export function drawCharacter(ctx, p, time = 0) {
-  const pose=softenedPose(p,time);
+  const pose=computeAnimatedPose(p,time);
   ctx.save();ctx.translate(p.x+p.w/2,p.y);ctx.scale(p.facing||1,1);
   ctx.lineJoin='round';
   // Ground contact shadow is deliberately subtle and absent during a ledge hang.

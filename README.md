@@ -32,7 +32,7 @@ Zbierz trzy fragmenty światła i dotrzyj do bramy po prawej stronie. Pierwsza w
 
 | Sterowanie | Działanie |
 | --- | --- |
-| ← / → albo A / D | Bieg z rozpędem; przeciwny kierunek hamuje |
+| ← / → albo A / D | Bieg z rozpędem; puszczenie kierunku wytraca prędkość, przeciwny kierunek hamuje przed obrotem |
 | Spacja / W / ↑ | Skok; przytrzymaj, by skoczyć wyżej, puść wcześniej dla krótkiego skoku |
 | W locie twarzą do krawędzi | Automatyczny chwyt przy opadaniu w zasięgu dłoni |
 | W / ↑ / spacja podczas zwisu | Podciągnięcie na półkę |
@@ -44,7 +44,7 @@ Na ekranach dotykowych są przyciski kierunków, puszczenia krawędzi oraz skoku
 
 ## Ruch i animacja
 
-`src/physics.js` prowadzi symulację w stałym kroku 1/120 s: przyspieszenie, tarcie, ograniczona kontrola w powietrzu, grawitacja, zmienna wysokość skoku, krótka tolerancja skoku po zejściu z krawędzi i buforowanie skoku przed lądowaniem. Chwyt utrzymuje pozycję przy krawędzi, a podciąganie przenosi ciało na półkę w czasie; sprawdza wolne miejsce nad nią. Kolizje działają z boków, od góry i od spodu platform.
+`src/physics.js` prowadzi symulację w stałym kroku 1/120 s: przyspieszenie, tarcie, ograniczona kontrola w powietrzu, grawitacja, zmienna wysokość skoku, krótka tolerancja skoku po zejściu z krawędzi i buforowanie skoku przed lądowaniem. Z pełnego biegu postać zatrzymuje się po około 0,42 s i 57 pikselach świata (nieco ponad dwie szerokości ciała); krótkie naciśnięcia wymagają znacznie mniej miejsca. Przeciwny kierunek hamuje mocniej, a obrót następuje dopiero po wytraceniu rozpędu. Chwyt utrzymuje pozycję przy krawędzi, a podciąganie przenosi ciało na półkę w czasie; sprawdza wolne miejsce nad nią. Kolizje działają z boków, od góry i od spodu platform.
 
 `src/character.js` rysuje szkielet z animacją stawów: bieg, hamowanie, skok, opadanie, ugięcie po lądowaniu, zwis i podciąganie. Jednolita skala świata zachowuje proporcje ciała na telefonie. Efekty kontaktu obejmują cień, kurz przy krokach/lądowaniu oraz drobiny przy chwycie.
 
