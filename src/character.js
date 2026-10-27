@@ -45,8 +45,11 @@ export function computePose(p, time = 0) {
   const bounce = p.grounded ? Math.cos(phase * TAU * 2) * 0.85 * energy : 0;
   const compression = mode === 'land'
     ? Math.sin(clamp((p.animTime || 0) / 0.13) * Math.PI) * (3 + clamp(p.landImpact || 0) * 5) : 0;
-  let hip = point(-1, 36 + bounce + compression);
-  let shoulder = point(lerp(-0.5, 5, energy), 17 + bounce + compression + breath * (1 - energy));
+  // A standing leg is almost fully extended.  Slightly longer 20px leg bones
+  // let the 34px hip-to-floor distance coexist with the planted running step,
+  // so the silhouette reads upright instead of permanently crouched.
+  let hip = point(-1, 30 + bounce + compression);
+  let shoulder = point(lerp(-0.5, 5, energy), 11 + bounce + compression + breath * (1 - energy));
   let frontFoot = gaitFoot(phase, energy), backFoot = gaitFoot(phase + 0.5, energy);
   let frontHand, backHand;
   // In facing-relative coordinates a relaxed elbow sits behind the arm's
@@ -73,8 +76,8 @@ export function computePose(p, time = 0) {
   }
   if (mode === 'rise') {
     const tuck = clamp(-(p.vy || 0) / 550);
-    hip = point(-2, 35);
-    shoulder = point(4, 16);
+    hip = point(-2, 32);
+    shoulder = point(4, 13);
     // The lead knee is driven up while the trailing leg finishes its push.
     frontFoot = point(14, lerp(57, 45, tuck));
     backFoot = point(-13, lerp(61, 52, tuck));
@@ -83,8 +86,8 @@ export function computePose(p, time = 0) {
   }
   if (mode === 'fall') {
     const falling = clamp((p.vy || 0) / 450);
-    shoulder = point(4, 17);
-    hip = point(-1, 36);
+    shoulder = point(4, 13);
+    hip = point(-1, 31);
     frontFoot = point(8, 60 - falling * 2);
     backFoot = point(-9, 57 + falling * 4);
     frontHand = point(19, lerp(11, 2, falling));
@@ -111,9 +114,9 @@ export function computePose(p, time = 0) {
       const t = clamp(p.climbProgress || 0);
       const pull = smooth(t / 0.67), stand = smooth((t - 0.67) / 0.33);
       const bodyX = lerp(-12, 22, smooth((t - 0.25) / 0.75));
-      const shoulderY = lerp(21, -20, pull) - 27 * stand;
+      const shoulderY = lerp(21, -20, pull) - 33 * stand;
       shoulder = add(edge, bodyX + lerp(3, 0, stand), shoulderY);
-      hip = add(shoulder, lerp(-6, -1, stand), lerp(22, 20, stand));
+      hip = add(shoulder, lerp(-6, -1, stand), lerp(22, 19, stand));
       const kneePlant = smooth((t - 0.18) / 0.47);
       frontFoot = add(edge, lerp(-7, 27, kneePlant), lerp(71, -1, kneePlant));
       backFoot = add(edge, lerp(-19, 16, smooth((t - 0.40) / 0.48)), lerp(67, -1, smooth((t - 0.40) / 0.48)));
@@ -128,8 +131,8 @@ export function computePose(p, time = 0) {
   }
   const frontShoulder = add(shoulder, 2.5, 1), backShoulder = add(shoulder, -2.5, 0);
   const frontHip = add(hip, 2, 0), backHip = add(hip, -2, 0);
-  const frontLeg = solveLimb(frontHip, frontFoot, 17.5, 17.5, -1);
-  const backLeg = solveLimb(backHip, backFoot, 17.5, 17.5, -1);
+  const frontLeg = solveLimb(frontHip, frontFoot, 20, 20, -1);
+  const backLeg = solveLimb(backHip, backFoot, 20, 20, -1);
   const frontArm = solveLimb(frontShoulder, frontHand, 13, 12.5, frontBend);
   const backArm = solveLimb(backShoulder, backHand, 13, 12.5, backBend);
   return {
@@ -157,8 +160,8 @@ export function computeAnimatedPose(p, time) {
     }
     target.frontHip = add(target.hip, 2, 0); target.backHip = add(target.hip, -2, 0);
     target.frontShoulder = add(target.shoulder, 2.5, 1); target.backShoulder = add(target.shoulder, -2.5, 0);
-    const frontLeg = solveLimb(target.frontHip, target.frontFoot, 17.5, 17.5);
-    const backLeg = solveLimb(target.backHip, target.backFoot, 17.5, 17.5);
+    const frontLeg = solveLimb(target.frontHip, target.frontFoot, 20, 20);
+    const backLeg = solveLimb(target.backHip, target.backFoot, 20, 20);
     const frontArm = solveLimb(target.frontShoulder, target.frontHand, 13, 12.5, target.frontArmBend);
     const backArm = solveLimb(target.backShoulder, target.backHand, 13, 12.5, target.backArmBend);
     target.frontKnee = frontLeg.joint; target.frontFoot = frontLeg.end;

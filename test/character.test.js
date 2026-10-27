@@ -21,8 +21,8 @@ test('all poses keep human limb lengths without stretching or non-finite coordin
         assert.ok(Number.isFinite(node.x) && Number.isFinite(node.y), `${mode}: invalid joint`);
       }
       for (const side of ['front', 'back']) {
-        near(distance(pose[`${side}Hip`], pose[`${side}Knee`]), 17.5);
-        near(distance(pose[`${side}Knee`], pose[`${side}Foot`]), 17.5);
+        near(distance(pose[`${side}Hip`], pose[`${side}Knee`]), 20);
+        near(distance(pose[`${side}Knee`], pose[`${side}Foot`]), 20);
         near(distance(pose[`${side}Shoulder`], pose[`${side}Elbow`]), 13);
         near(distance(pose[`${side}Elbow`], pose[`${side}Hand`]), 12.5);
       }
@@ -73,6 +73,15 @@ test('a heavier landing compresses the body more while feet remain on the floor'
   assert.ok(heavy.hip.y > light.hip.y + 3);
   near(heavy.frontFoot.y, 63);
   near(heavy.backFoot.y, 63);
+});
+
+test('idle and planted running legs are nearly extended rather than permanently crouched', () => {
+  const idle = computePose(spawn());
+  assert.ok(distance(idle.frontHip, idle.frontFoot) > 33);
+  assert.ok(distance(idle.backHip, idle.backFoot) > 33);
+  // At the middle of a planted step the leg still retains a light knee bend.
+  const running = computePose({ ...spawn(), mode: 'run', vx: 240, gait: 30 });
+  assert.ok(distance(running.frontHip, running.frontFoot) > 32);
 });
 
 test('climbing starts continuously from the hanging pose and finishes near standing', () => {
