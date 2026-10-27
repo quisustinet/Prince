@@ -43,6 +43,20 @@ test('both facing directions anchor hands to the stone lip throughout hanging sw
   }
 });
 
+test('jumping elbows fold toward the body and hanging arms are nearly straight', () => {
+  for (const facing of [-1, 1]) {
+    const rise = computePose({ ...spawn(), mode: 'rise', grounded: false, facing, vx: facing * 120, vy: -500 });
+    assert.ok(rise.frontElbow.y > rise.frontShoulder.y, 'front jumping elbow stays below the shoulder');
+    assert.ok(rise.backElbow.y > rise.backShoulder.y, 'rear jumping elbow stays below the shoulder');
+    const hang = computePose(hanging(facing));
+    for (const side of ['front', 'back']) {
+      const shoulder = hang[`${side}Shoulder`], elbow = hang[`${side}Elbow`], hand = hang[`${side}Hand`];
+      assert.ok(elbow.y < shoulder.y && elbow.y > hand.y, 'hanging elbow sits between shoulder and hand');
+      assert.ok(distance(shoulder, hand) > 24, 'hanging arm is almost fully extended');
+    }
+  }
+});
+
 test('running bends knees and elbows in opposing phases instead of translating rigid limbs', () => {
   const p = { ...spawn(), mode: 'run', vx: 275 };
   const first = computePose({ ...p, gait: 8 }, 0);

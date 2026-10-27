@@ -85,7 +85,9 @@ export function computePose(p, time = 0) {
     frontFoot = point(14, lerp(57, 45, tuck));
     backFoot = point(-13, lerp(61, 52, tuck));
     frontHand = point(16, 9); backHand = point(-13, 29);
-    frontBend = -1;
+    // During a jump the elbow folds down toward the torso; the old pole put
+    // it above the shoulder and made the reach look dislocated.
+    frontBend = backBend = 1;
   }
   if (mode === 'fall') {
     const falling = clamp((p.vy || 0) / 450);
@@ -95,7 +97,9 @@ export function computePose(p, time = 0) {
     backFoot = point(-9, 57 + falling * 4);
     frontHand = point(19, lerp(11, 2, falling));
     backHand = point(-11, lerp(16, 6, falling));
-    frontBend = backBend = -1;
+    // Keep each airborne elbow below its shoulder/wrist line instead of
+    // pointing skyward during the reach.
+    frontBend = 1; backBend = -1;
   }
   if (mode === 'land') {
     frontFoot = point(11, 63); backFoot = point(-10, 63);
@@ -104,11 +108,13 @@ export function computePose(p, time = 0) {
   }
   const anchors = (mode === 'hang' || mode === 'climb') && p.ledge;
   if (anchors) {
-    frontBend = backBend = -1;
     const edge = point((p.ledge.x - (p.x + p.w / 2)) * p.facing, p.ledge.y - p.y);
     if (mode === 'hang') {
+      // A supported hanging body uses near-straight arms.  There is only a
+      // tiny natural flex, so no elbow reads as bending above the hands.
+      frontBend = backBend = 1;
       const sway = Math.sin(time * 2.6) * 1.5;
-      shoulder = add(edge, -9, 21);
+      shoulder = add(edge, -7, 24);
       hip = add(edge, -15 + sway, 43);
       frontFoot = add(edge, -7 + sway, 71);
       backFoot = add(edge, -19 + sway, 67);
@@ -116,10 +122,11 @@ export function computePose(p, time = 0) {
     } else {
       const t = clamp(p.climbProgress || 0);
       const pull = smooth(t / 0.67), stand = smooth((t - 0.67) / 0.33);
-      const bodyX = lerp(-12, 22, smooth((t - 0.25) / 0.75));
-      const shoulderY = lerp(21, -20, pull) - 41 * stand;
+      // Start from the exact hanging pose, then pull the torso over the lip.
+      const bodyX = lerp(-10, 22, smooth((t - 0.25) / 0.75));
+      const shoulderY = lerp(24, -20, pull) - 41 * stand;
       shoulder = add(edge, bodyX + lerp(3, 0, stand), shoulderY);
-      hip = add(shoulder, lerp(-6, -1, stand), lerp(22, 19, stand));
+      hip = add(shoulder, lerp(-8, -1, stand), 19);
       const kneePlant = smooth((t - 0.18) / 0.47);
       frontFoot = add(edge, lerp(-7, 27, kneePlant), lerp(71, -1, kneePlant));
       backFoot = add(edge, lerp(-19, 16, smooth((t - 0.40) / 0.48)), lerp(67, -1, smooth((t - 0.40) / 0.48)));
