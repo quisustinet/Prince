@@ -31,28 +31,28 @@ function gaitFoot(phase, energy) {
   phase = ((phase % 1) + 1) % 1;
   // 58% stance: a foot sweeps backwards by precisely the distance the body
   // travels during contact. The remaining phase lifts the foot over the floor.
-  // A compact 22px step keeps the planted leg beneath the hips. The former
-  // 44px stride forced the knees to stay folded merely to reach the ground.
-  if (phase < 0.58) return point(lerp(11, -11, phase / 0.58) * energy, 63);
+  // A 33.6px step slows the cadence without letting the planted foot slide:
+  // its travel matches the 58px gait cycle during the stance phase.
+  if (phase < 0.58) return point(lerp(16.82, -16.82, phase / 0.58) * energy, 63);
   const t = (phase - 0.58) / 0.42;
-  return point(lerp(-11, 11, smooth(t)) * energy, 63 - Math.sin(Math.PI * t) * 16 * energy);
+  return point(lerp(-16.82, 16.82, smooth(t)) * energy, 63 - Math.sin(Math.PI * t) * 16 * energy);
 }
 
 /** Pure pose data in facing-relative coordinates, origin at player's top centre. */
 export function computePose(p, time = 0) {
   const speed = Math.abs(p.vx || 0), energy = clamp(speed / 210);
   const mode = p.mode || (p.grounded ? (speed > 10 ? 'run' : 'idle') : (p.vy < 0 ? 'rise' : 'fall'));
-  // One gait cycle covers a 38px step. Together with gaitFoot this means a
+  // One gait cycle covers a 58px step. Together with gaitFoot this means a
   // planted foot stays in world space while the hips pass over it.
-  const phase = (p.gait || 0) / 38;
+  const phase = (p.gait || 0) / 58;
   const breath = Math.sin(time * 2.7) * 0.55;
   const bounce = p.grounded ? Math.cos(phase * TAU * 2) * 0.85 * energy : 0;
   const compression = mode === 'land'
     ? Math.sin(clamp((p.animTime || 0) / 0.13) * Math.PI) * (3 + clamp(p.landImpact || 0) * 5) : 0;
   // The hip sits high enough that the support leg is close to straight. A
   // small bend remains for weight and impact, rather than a permanent squat.
-  let hip = point(-1, 25 + bounce + compression);
-  let shoulder = point(lerp(-0.5, 5, energy), 6 + bounce + compression + breath * (1 - energy));
+  let hip = point(-1, 22 + bounce + compression);
+  let shoulder = point(lerp(-0.5, 5, energy), 3 + bounce + compression + breath * (1 - energy));
   let frontFoot = gaitFoot(phase, energy), backFoot = gaitFoot(phase + 0.5, energy);
   let frontHand, backHand;
   // In facing-relative coordinates a relaxed elbow sits behind the arm's
@@ -117,7 +117,7 @@ export function computePose(p, time = 0) {
       const t = clamp(p.climbProgress || 0);
       const pull = smooth(t / 0.67), stand = smooth((t - 0.67) / 0.33);
       const bodyX = lerp(-12, 22, smooth((t - 0.25) / 0.75));
-      const shoulderY = lerp(21, -20, pull) - 38 * stand;
+      const shoulderY = lerp(21, -20, pull) - 41 * stand;
       shoulder = add(edge, bodyX + lerp(3, 0, stand), shoulderY);
       hip = add(shoulder, lerp(-6, -1, stand), lerp(22, 19, stand));
       const kneePlant = smooth((t - 0.18) / 0.47);
@@ -134,8 +134,8 @@ export function computePose(p, time = 0) {
   }
   const frontShoulder = add(shoulder, 2.5, 1), backShoulder = add(shoulder, -2.5, 0);
   const frontHip = add(hip, 2, 0), backHip = add(hip, -2, 0);
-  const frontLeg = solveLimb(frontHip, frontFoot, 20, 20, -1);
-  const backLeg = solveLimb(backHip, backFoot, 20, 20, -1);
+  const frontLeg = solveLimb(frontHip, frontFoot, 22, 22, -1);
+  const backLeg = solveLimb(backHip, backFoot, 22, 22, -1);
   const frontArm = solveLimb(frontShoulder, frontHand, 13, 12.5, frontBend);
   const backArm = solveLimb(backShoulder, backHand, 13, 12.5, backBend);
   return {
@@ -163,8 +163,8 @@ export function computeAnimatedPose(p, time) {
     }
     target.frontHip = add(target.hip, 2, 0); target.backHip = add(target.hip, -2, 0);
     target.frontShoulder = add(target.shoulder, 2.5, 1); target.backShoulder = add(target.shoulder, -2.5, 0);
-    const frontLeg = solveLimb(target.frontHip, target.frontFoot, 20, 20);
-    const backLeg = solveLimb(target.backHip, target.backFoot, 20, 20);
+    const frontLeg = solveLimb(target.frontHip, target.frontFoot, 22, 22);
+    const backLeg = solveLimb(target.backHip, target.backFoot, 22, 22);
     const frontArm = solveLimb(target.frontShoulder, target.frontHand, 13, 12.5, target.frontArmBend);
     const backArm = solveLimb(target.backShoulder, target.backHand, 13, 12.5, target.backArmBend);
     target.frontKnee = frontLeg.joint; target.frontFoot = frontLeg.end;

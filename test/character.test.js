@@ -21,8 +21,8 @@ test('all poses keep human limb lengths without stretching or non-finite coordin
         assert.ok(Number.isFinite(node.x) && Number.isFinite(node.y), `${mode}: invalid joint`);
       }
       for (const side of ['front', 'back']) {
-        near(distance(pose[`${side}Hip`], pose[`${side}Knee`]), 20);
-        near(distance(pose[`${side}Knee`], pose[`${side}Foot`]), 20);
+        near(distance(pose[`${side}Hip`], pose[`${side}Knee`]), 22);
+        near(distance(pose[`${side}Knee`], pose[`${side}Foot`]), 22);
         near(distance(pose[`${side}Shoulder`], pose[`${side}Elbow`]), 13);
         near(distance(pose[`${side}Elbow`], pose[`${side}Hand`]), 12.5);
       }
@@ -46,7 +46,7 @@ test('both facing directions anchor hands to the stone lip throughout hanging sw
 test('running bends knees and elbows in opposing phases instead of translating rigid limbs', () => {
   const p = { ...spawn(), mode: 'run', vx: 275 };
   const first = computePose({ ...p, gait: 8 }, 0);
-  const second = computePose({ ...p, gait: 27 }, 0);
+  const second = computePose({ ...p, gait: 37 }, 0);
   assert.ok(distance(first.frontKnee, second.frontKnee) > 5);
   assert.ok(distance(first.frontElbow, second.frontElbow) > 5);
   assert.ok(first.frontFoot.x > first.backFoot.x);
@@ -78,11 +78,11 @@ test('a heavier landing compresses the body more while feet remain on the floor'
 
 test('idle and planted running legs are nearly extended rather than permanently crouched', () => {
   const idle = computePose(spawn());
-  assert.ok(distance(idle.frontHip, idle.frontFoot) > 38);
-  assert.ok(distance(idle.backHip, idle.backFoot) > 38);
+  assert.ok(distance(idle.frontHip, idle.frontFoot) > 41);
+  assert.ok(distance(idle.backHip, idle.backFoot) > 41);
   // At the middle of a planted step the leg still retains a light knee bend.
   const running = computePose({ ...spawn(), mode: 'run', vx: 240, gait: 10 });
-  assert.ok(distance(running.frontHip, running.frontFoot) > 37);
+  assert.ok(distance(running.frontHip, running.frontFoot) > 41);
 });
 
 test('climbing starts continuously from the hanging pose and finishes near standing', () => {
