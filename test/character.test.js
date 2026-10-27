@@ -46,7 +46,7 @@ test('both facing directions anchor hands to the stone lip throughout hanging sw
 test('running bends knees and elbows in opposing phases instead of translating rigid limbs', () => {
   const p = { ...spawn(), mode: 'run', vx: 275 };
   const first = computePose({ ...p, gait: 8 }, 0);
-  const second = computePose({ ...p, gait: 46 }, 0);
+  const second = computePose({ ...p, gait: 27 }, 0);
   assert.ok(distance(first.frontKnee, second.frontKnee) > 5);
   assert.ok(distance(first.frontElbow, second.frontElbow) > 5);
   assert.ok(first.frontFoot.x > first.backFoot.x);
@@ -58,7 +58,8 @@ test('running bends knees and elbows in opposing phases instead of translating r
 test('the stance foot stays planted in world coordinates as the body advances', () => {
   const p = { ...spawn(), mode: 'run', vx: 275, gait: 4 };
   const initial = world(p, computePose(p, 0).frontFoot);
-  for (let distanceMoved = 1; distanceMoved <= 28; distanceMoved++) {
+  // The front foot remains in its 58% stance phase for this interval.
+  for (let distanceMoved = 1; distanceMoved <= 15; distanceMoved++) {
     const next = { ...p, x: p.x + distanceMoved, gait: p.gait + distanceMoved };
     const foot = world(next, computePose(next, 0).frontFoot);
     near(foot.x, initial.x, 0.07);
@@ -77,11 +78,11 @@ test('a heavier landing compresses the body more while feet remain on the floor'
 
 test('idle and planted running legs are nearly extended rather than permanently crouched', () => {
   const idle = computePose(spawn());
-  assert.ok(distance(idle.frontHip, idle.frontFoot) > 33);
-  assert.ok(distance(idle.backHip, idle.backFoot) > 33);
+  assert.ok(distance(idle.frontHip, idle.frontFoot) > 38);
+  assert.ok(distance(idle.backHip, idle.backFoot) > 38);
   // At the middle of a planted step the leg still retains a light knee bend.
-  const running = computePose({ ...spawn(), mode: 'run', vx: 240, gait: 30 });
-  assert.ok(distance(running.frontHip, running.frontFoot) > 32);
+  const running = computePose({ ...spawn(), mode: 'run', vx: 240, gait: 10 });
+  assert.ok(distance(running.frontHip, running.frontFoot) > 37);
 });
 
 test('climbing starts continuously from the hanging pose and finishes near standing', () => {
